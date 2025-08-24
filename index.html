@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySQL Web Client (Omm Prakash Sahu)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1419 100%);
+            color: #e0e6ff;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(circle at 20% 80%, rgba(0, 123, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 255, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 40% 40%, rgba(138, 43, 226, 0.08) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        header {
+            background: linear-gradient(90deg, #1a237e 0%, #3949ab 100%);
+            border-bottom: 2px solid #00bcd4;
+            box-shadow: 0 4px 20px rgba(0, 188, 212, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 255, 0.1), transparent);
+            animation: shimmer 3s infinite;
+        }
+
+        header h1 {
+            text-align: center;
+            padding: 15px;
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 0 20px rgba(0, 188, 212, 0.5);
+            position: relative;
+            z-index: 1;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+
+        .query-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 188, 212, 0.2);
+            border-radius: 16px;
+            padding: clamp(1.5rem, 4vw, 2.5rem);
+            margin-bottom: 2rem;
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .query-panel::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #00bcd4, transparent);
+        }
+
+        h2 {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            margin-bottom: 1.5rem;
+            color: #00bcd4;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(0, 188, 212, 0.3);
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 120px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(0, 188, 212, 0.3);
+            border-radius: 12px;
+            padding: 1rem;
+            font-family: "JetBrains Mono", "Fira Code", Consolas, monospace;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #e0e6ff;
+            resize: vertical;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+        }
+
+        textarea::placeholder {
+            color: rgba(224, 230, 255, 0.5);
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #00bcd4;
+            box-shadow:
+                0 0 0 2px rgba(0, 188, 212, 0.2),
+                0 0 20px rgba(0, 188, 212, 0.1);
+            background: rgba(0, 0, 0, 0.6);
+        }
+
+        .button-container {
+            margin-top: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: linear-gradient(135deg, #1976d2 0%, #00bcd4 100%);
+            margin:5px;
+            border: none;
+            border-radius: 12px;
+            padding: 0.75rem 2rem;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 188, 212, 0.3);
+            min-width: 120px;
+        }
+
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 188, 212, 0.4);
+        }
+
+        button:hover::before {
+            left: 100%;
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #output {
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .results-panel {
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 188, 212, 0.2);
+            border-radius: 16px;
+            padding: clamp(1rem, 3vw, 2rem);
+            box-shadow:
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 1rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        th {
+            background: linear-gradient(135deg, #1976d2 0%, #00bcd4 100%);
+            color: white;
+            padding: clamp(0.75rem, 2vw, 1rem);
+            font-weight: 600;
+            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        td {
+            padding: clamp(0.5rem, 2vw, 0.75rem);
+            border-bottom: 1px solid rgba(0, 188, 212, 0.1);
+            font-size: clamp(0.75rem, 2vw, 0.875rem);
+            word-break: break-word;
+        }
+
+        tr:nth-child(even) {
+            background: rgba(0, 188, 212, 0.05);
+        }
+
+        tr:hover {
+            background: rgba(0, 188, 212, 0.1);
+            transition: background-color 0.3s ease;
+        }
+
+        .status {
+            padding: clamp(0.75rem, 2vw, 1rem);
+            border-radius: 12px;
+            margin-top: 1rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .status.error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid rgba(244, 67, 54, 0.3);
+            color: #ff8a80;
+        }
+
+        .status.success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            color: #a5d6a7;
+        }
+
+        .status.loading {
+            background: rgba(0, 188, 212, 0.1);
+            border: 1px solid rgba(0, 188, 212, 0.3);
+            color: #00bcd4;
+        }
+
+        .loader {
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid #00bcd4;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            max-width: 100%;
+            border-radius: 12px;
+        }
+
+        .table-container::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 4px;
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(90deg, #1976d2, #00bcd4);
+            border-radius: 4px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 1rem auto;
+                padding: 0 0.75rem;
+            }
+
+            .query-panel {
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            textarea {
+                min-height: 100px;
+            }
+
+            .button-container {
+                justify-content: center;
+            }
+
+            button {
+                flex: 1;
+                min-width: auto;
+            }
+
+            th,
+            td {
+                padding: 0.5rem 0.25rem;
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header h1 {
+                font-size: 1.5rem;
+                padding: 15px;
+            }
+
+            .query-panel {
+                padding: 1rem;
+                border-radius: 12px;
+            }
+
+            textarea {
+                min-height: 80px;
+                font-size: 0.875rem;
+            }
+
+            .button-container {
+                margin-top: 1rem;
+            }
+
+            button {
+                padding: 0.6rem 1.5rem;
+                font-size: 0.875rem;
+            }
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .container {
+                max-width: 95%;
+            }
+
+            .query-panel {
+                padding: 2rem;
+            }
+
+            textarea {
+                min-height: 140px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>⚡ MySQL Web Client</h1>
+    </header>
+
+    <div class="container">
+        <div class="query-panel">
+            <h2>🔍 Execute SQL Query</h2>
+            <textarea id="query" placeholder="Enter your SQL query here
+Execute Single Line at Once."></textarea>
+            <div class="button-container">
+                <button onclick="runQuery()">▶️ Run Query</button>
+                <button onclick="saveQuery()">💾 Save Query</button>
+                <button onclick="loadQueries()">📂 Load Queries</button>
+
+            </div>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        async function runQuery() {
+            const sql = document.getElementById("query").value.trim();
+            const output = document.getElementById("output");
+
+            if (!sql) {
+                output.innerHTML = "<div class='results-panel'><div class='status error'>⚠️ Please enter a SQL query</div></div>";
+                return;
+            }
+
+            output.innerHTML = "<div class='results-panel'><div class='status loading'><span class='loader'></span>Executing query...</div></div>";
+
+            try {
+                const res = await fetch("http://localhost:5000/query", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ sql })
+                });
+                const data = await res.json();
+
+                if (data.error) {
+                    output.innerHTML = "<div class='results-panel'><div class='status error'>❌ Error: " + data.error + "</div></div>";
+                } else if (data.columns) {
+                    let html = "<div class='results-panel'><div class='table-container'><table><thead><tr>";
+                    data.columns.forEach(c => html += "<th>" + c + "</th>");
+                    html += "</tr></thead><tbody>";
+                    data.rows.forEach(row => {
+                        html += "<tr>";
+                        data.columns.forEach(c => html += "<td>" + (row[c] ?? "") + "</td>");
+                        html += "</tr>";
+                    });
+                    html += "</tbody></table></div></div>";
+                    output.innerHTML = html;
+                } else {
+                    output.innerHTML = "<div class='results-panel'><div class='status success'>✅ " + data.message + "</div></div>";
+                }
+            } catch (err) {
+                output.innerHTML = "<div class='results-panel'><div class='status error'>🚫 Failed to connect to backend server</div></div>";
+            }
+        }
+
+
+        async function saveQuery() {
+            const sql = document.getElementById("query").value.trim();
+            const output = document.getElementById("output");
+
+            if (!sql) {
+                output.innerHTML = "<div class='results-panel'><div class='status error'>⚠️ Please enter a SQL query</div></div>";
+                return;
+            }
+
+            output.innerHTML = "<div class='results-panel'><div class='status loading'><span class='loader'></span>Saving query...</div></div>";
+
+            try {
+                const res = await fetch("http://localhost:5000/save", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ sql }),
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    output.innerHTML = `<div class='results-panel'><div class='status success'>✅ ${data.message}</div></div>`;
+                } else {
+                    output.innerHTML = `<div class='results-panel'><div class='status error'>🚫 ${data.error || "Failed to save query"}</div></div>`;
+                }
+            } catch (err) {
+                console.error(err);
+                output.innerHTML = "<div class='results-panel'><div class='status error'>🚫 Failed to save query (network error)</div></div>";
+            }
+        }
+
+
+
+        async function loadQueries() {
+            const output = document.getElementById("output");
+            output.innerHTML = "<div class='results-panel'><div class='status loading'><span class='loader'></span>Loading saved queries...</div></div>";
+
+            try {
+                const res = await fetch("http://localhost:5000/load");
+                const data = await res.json();
+
+                if (data.error) {
+                    output.innerHTML = `<div class='results-panel'><div class='status error'>🚫 ${data.error}</div></div>`;
+                    return;
+                }
+
+                if (data.queries.length === 0) {
+                    output.innerHTML = "<div class='results-panel'><div class='status error'>⚠️ No saved queries found</div></div>";
+                    return;
+                }
+
+                let html = "<div class='results-panel'><h3>📂 Saved Queries</h3><ul>";
+                data.queries.forEach((q, i) => {
+                    html += `<li>
+                            <button onclick="document.getElementById('query').value = \`${q}\`">➡️ Load</button> 
+                            ${q}
+                         </li>`;
+                });
+                html += "</ul></div>";
+                output.innerHTML = html;
+            } catch (err) {
+                console.error(err);
+                output.innerHTML = "<div class='results-panel'><div class='status error'>🚫 Failed to load queries (network error)</div></div>";
+            }
+        }
+
+        document.getElementById('query').addEventListener('keydown', function (e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                runQuery();
+            }
+        });
+    </script>
+</body>
+
+</html>
